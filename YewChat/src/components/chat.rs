@@ -46,6 +46,7 @@ pub struct Chat {
     wss: WebsocketService,
     messages: Vec<MessageData>,
 }
+
 impl Component for Chat {
     type Message = Msg;
     type Properties = ();
@@ -138,47 +139,78 @@ impl Component for Chat {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let submit = ctx.link().callback(|_| Msg::SubmitMessage);
         html! {
-            <div class="flex w-screen">
-                <div class="flex-none w-56 h-screen bg-gray-100">
-                    <div class="text-xl p-3">{"Users"}</div>
-                    {
-                        self.users.clone().iter().map(|u| {
-                            html!{
-                                <div class="flex m-3 bg-white rounded-lg p-2">
-                                    <div>
-                                        <img class="w-12 h-12 rounded-full" src={u.avatar.clone()} alt="avatar"/>
-                                    </div>
-                                    <div class="flex-grow p-3">
-                                        <div class="flex text-xs justify-between">
-                                            <div>{u.name.clone()}</div>
+            <div class="flex w-screen h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+                // Sidebar untuk daftar pengguna
+                <div class="flex-none w-72 h-screen bg-gradient-to-b from-indigo-600 to-purple-700 shadow-2xl">
+                    <div class="text-2xl font-bold p-4 text-white border-b border-indigo-500/30">
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            {"👥 Pengguna Online"}
+                        </div>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        {
+                            self.users.clone().iter().map(|u| {
+                                html!{
+                                    <div class="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-3 hover:bg-white/20 transition-all duration-200 cursor-pointer border border-white/20">
+                                        <div class="relative">
+                                            <img class="w-12 h-12 rounded-full border-2 border-white/50" src={u.avatar.clone()} alt="avatar"/>
+                                            <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
                                         </div>
-                                        <div class="text-xs text-gray-400">
-                                            {"Hi there!"}
+                                        <div class="flex-grow">
+                                            <div class="text-white font-semibold text-sm">
+                                                {u.name.clone()}
+                                            </div>
+                                            <div class="text-indigo-200 text-xs">
+                                                {"Sedang aktif"}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            }
-                        }).collect::<Html>()
-                    }
+                                }
+                            }).collect::<Html>()
+                        }
+                    </div>
                 </div>
+                
+                // Area chat utama
                 <div class="grow h-screen flex flex-col">
-                    <div class="w-full h-14 border-b-2 border-gray-300"><div class="text-xl p-3">{"💬 Chat!"}</div></div>
-                    <div class="w-full grow overflow-auto border-b-2 border-gray-300">
+                    // Header chat
+                    <div class="w-full h-16 bg-white shadow-lg border-b border-gray-200">
+                        <div class="flex items-center h-full px-6">
+                            <div class="text-2xl">{"💬"}</div>
+                            <div class="ml-3">
+                                <div class="text-xl font-bold text-gray-800">{"Ruang Obrolan"}</div>
+                                <div class="text-sm text-gray-500">
+                                    {format!("{} pengguna aktif", self.users.len())}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    // Area pesan
+                    <div class="w-full grow overflow-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white">
                         {
                             self.messages.iter().map(|m| {
                                 let user = self.users.iter().find(|u| u.name == m.from).unwrap();
                                 html!{
-                                    <div class="flex items-end w-3/6 bg-gray-100 m-8 rounded-tl-lg rounded-tr-lg rounded-br-lg ">
-                                        <img class="w-8 h-8 rounded-full m-3" src={user.avatar.clone()} alt="avatar"/>
-                                        <div class="p-3">
-                                            <div class="text-sm">
-                                                {m.from.clone()}
+                                    <div class="flex items-start gap-3 max-w-4xl">
+                                        <img class="w-10 h-10 rounded-full border-2 border-indigo-200 shadow-sm" src={user.avatar.clone()} alt="avatar"/>
+                                        <div class="bg-white rounded-2xl rounded-tl-md shadow-md p-4 border border-gray-100 flex-grow">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <div class="text-sm font-semibold text-indigo-600">
+                                                    {m.from.clone()}
+                                                </div>
+                                                <div class="text-xs text-gray-400">
+                                                    {"baru saja"}
+                                                </div>
                                             </div>
-                                            <div class="text-xs text-gray-500">
+                                            <div class="text-gray-700">
                                                 if m.message.ends_with(".gif") {
-                                                    <img class="mt-3" src={m.message.clone()}/>
+                                                    <img class="mt-2 rounded-lg max-w-sm shadow-sm" src={m.message.clone()} alt="GIF"/>
                                                 } else {
-                                                    {m.message.clone()}
+                                                    <div class="break-words">
+                                                        {m.message.clone()}
+                                                    </div>
                                                 }
                                             </div>
                                         </div>
@@ -186,15 +218,29 @@ impl Component for Chat {
                                 }
                             }).collect::<Html>()
                         }
-
                     </div>
-                    <div class="w-full h-14 flex px-3 items-center">
-                        <input ref={self.chat_input.clone()} type="text" placeholder="Message" class="block w-full py-2 pl-4 mx-3 bg-gray-100 rounded-full outline-none focus:text-gray-700" name="message" required=true />
-                        <button onclick={submit} class="p-3 shadow-sm bg-blue-600 w-10 h-10 rounded-full flex justify-center items-center color-white">
-                            <svg fill="#000000" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="fill-white">
-                                <path d="M0 0h24v24H0z" fill="none"></path><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                            </svg>
-                        </button>
+                    
+                    // Input area
+                    <div class="w-full bg-white border-t border-gray-200 shadow-lg">
+                        <div class="flex items-center gap-4 p-4">
+                            <input 
+                                ref={self.chat_input.clone()} 
+                                type="text" 
+                                placeholder="Ketik pesan Anda di sini..." 
+                                class="flex-grow py-3 px-4 bg-gray-50 border border-gray-200 rounded-full outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-700 placeholder-gray-400"
+                                name="message" 
+                                required=true 
+                            />
+                            <button 
+                                onclick={submit} 
+                                class="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 w-12 h-12 rounded-full flex justify-center items-center shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                            >
+                                <svg fill="#ffffff" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5">
+                                    <path d="M0 0h24v24H0z" fill="none"></path>
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
